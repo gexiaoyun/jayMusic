@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Music</title>
+  <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+  <div class="music">
+    <div class="music_top">
+      <img src="./img/jay.jpg" alt="" class="music_top-img">
+      <div class="music_top-biref">
+        周杰伦
+        2001年初，周杰伦发行首张专辑《Jay》，成功让台湾的歌星们大跌眼镜，在人们还没有完全记住周杰伦这个名字的时候，9月20日他带来了个更为天马行空的专辑《范特西》，周杰伦也凭借这张专辑成功打开了东西南亚市场。
+
+        2003年7月，全亚洲超过50家电台定7月16日为周杰伦日，同步首播新专辑《叶惠美》中的主打歌曲《以父之名》。
+
+        2003年《东风破》发行，周杰伦被华语音乐传媒大赏评为最佳作曲人...
+
+      </div>
+      <ul class="music_top-btn">
+          <li class="audio_prev">上一首</li>
+          <li class="audio_play">播放</li>
+          <li class="audio_next">下一首</li>
+          <li class="audio_random">随机</li>
+      </ul>
+    </div>
+    <div class="music_list">
+      <ul id="list"></ul>
+    </div>
+    <div class="music_lyric"></div>
+  </div>
+
+<!-- 播放器 -->
+  <audio controls autoplay src='' id="audio" style="display: none;">
+    您的浏览器不支持 video 标签。
+  </audio>
+
+  <script src="js/jquery-3.1.1.min.js"></script>
+  <script>
+
+    var searchValue = '周杰伦', current= 1, pageSize = 999999999;
+    var isFirst = true;
+    var isRandom = false;
+    var nowPlayId = '';
+    var audio = document.querySelector('audio');
+    var musicPic = `http://music.migu.cn/v3/api/music/audioPlayer/getSongPic?songId=`;
+    var url = `http://pd.musicapp.migu.cn/MIGUM2.0/v1.0/content/search_all.do?&ua=Android_migu&version=5.0.1&text=${encodeURI(searchValue)}&pageNo=${current}&pageSize=${pageSize}&searchSwitch={"song":1,"album":0,"singer":0,"tagSong":0,"mvSong":0,"songlist":0,"bestShow":1}`;
+
+    $.get(url, function(data){
+        console.log(data);
+        var list = data.songResultData.result;
+
+        $('#list').html(getList(list));
+
+    });
+
+    function getList(list) {
+      var html = '';
+      list.map(function(o,i){
+        html += `
+          <li data-id="${o.contentId}">
+            <span class="sort">${i + 1}</span><span class="name">${o.name} - </span> <span class="singer">${o.singers[0].name}</span>
+          </li>
+        `;
+      })
+
+      return html;
+    }
+
+
+    $('.audio_play').click(function(){
+      var listNum = $('#list li').length;
+      if (listNum === 0 ) return;
+
+      if (!$(this).hasClass('on')) {
+        $(this).addClass('on');
+        $(this).html('暂停');
+        if (isFirst) {
+          var firstSong = $('#list').find('li')[0];
+          var id = $(firstSong).data('id');
+          sing(id);
+          isFirst= false;
+        } else {
+          audio.play();
+        }
+      } else {
+        $(this).removeClass('on');
+        $(this).html('播放');
+        audio.pause();
+      }
+    });
+
+    $('.audio_prev').click(function() {
+       if (isRandom) {
+         songRandom();
+
+       } else {
+         var list = $('#list li');
+         list.map(function(i, o) {
+           var liId = $(o).data('id');
+           if (liId === nowPlayId) {
+               if (i === 0) {
+                 alert('已经是第一首了');
+               } else {
+                 var prevId = $(o).prev().data('id');
+                 sing(prevId);
+               }
+           }
+         })
+       }
+    });
+
+    $('.audio_next').click(function() {
+      if (isRandom) {
+        songRandom();
+      } else {
+        var list = $('#list li');
+        var nextSing = false, nextId = '';
+        list.map(function(i, o) {
+          var liId = $(o).data('id');
+          if (liId === nowPlayId) {
+            if (i === (list.length -1)) {
+              alert('已经是最后一首了');
+            } else{
+              nextSing = true;
+              nextId = $(o).next().data('id');
+              return false;
+            }
+          }
+          if (nextSing) {
+            sing(nextId);
+          }
+        })
+      }
+    });
+
+    $('.audio_random').click(function(){
+      isRandom = !isRandom;
+    });
+
+    $('#list').on('click', 'li', function(){
+      $('.audio_play').addClass('on');
+      $('.audio_play').html('暂停');
+      isFirst = false;
+      var id = $(this).data('id');
+      sing(id);
+    });
+
+    function songRandom() {
+      var list = $('#list li');
+      var num = list.length;
+      var ran = Math.floor((Math.random()*num)+1);
+      var prevId = $(list[ran]).data('id');
+      sing(prevId);
+    }
+
+
+    function sing(contentId) {
+      nowPlayId = contentId;
+      addPlaySongBg();
+      // 无损 formatType = SQ resourceType = E
+      // 高品 formatType = HQ resourceType = 2
+      var uri = `http://app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do?toneFlag=HQ&netType=00&userId=15548614588710179085069&ua=Android_migu&version=5.1&copyrightId=0&contentId=${contentId}&resourceType=2&channel=1`
+      audio.src = uri
+    }
+
+    function addPlaySongBg() {
+      var list = $('#list li');
+      list.map(function(i,o) {
+        if ($(o).data('id') === nowPlayId) {
+          $(o).addClass('active').siblings().removeClass('active');
+        }
+      })
+    }
+
+    audio.onended = function () {
+      $('.audio_next').click();
+    };
+
+  </script>
+</body>
+</html>
